@@ -1,0 +1,49 @@
+# Release build for Jose's PC: cargo build --release --workspace on a
+# GitHub Windows runner, upload xcl.exe as an artifact.
+# Public fork, so this does not consume private-repo Actions minutes.
+# No code changes, no game data, no upstream PR.
+name: Build release exe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-release:
+    name: Build xcl.exe (Windows, release)
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust (stable, MSVC)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-${{ runner.os }}-release-${{ hashFiles('Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: cargo-${{ runner.os }}-release-
+
+      - name: Build release
+        shell: pwsh
+        run: cargo build --release --workspace
+
+      - name: Upload xcl.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcl-windows-release
+          path: target/release/xcl.exe
+          if-no-files-found: error
